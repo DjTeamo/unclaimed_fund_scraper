@@ -1,3 +1,4 @@
+import os
 import requests
 import json
 from web3 import Web3
@@ -6,7 +7,6 @@ import paypalrestsdk
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-import os
 from datetime import datetime, timedelta
 import threading
 import time
@@ -68,10 +68,21 @@ def home():
     funds = UnclaimedFund.query.all()
     return render_template('dashboard.html', funds=funds)
 
-@app.route('/search_funds', methods=['GET'])
+@app.route('/search_funds', methods=['GET', 'POST'])
 def admin_search_funds():
     if 'user_id' not in session or not session.get('is_admin', False):
         return "Unauthorized", 403
+
+    if request.method == 'POST':
+        name = request.form['name']
+        country = request.form.get('country', 'US')
+        funds = search_unclaimed_funds(name, country)
+        for fund in funds.get('results', []):
+            new_fund = UnclaimedFund(name=fund['name'], amount=fund['amount'], source=fund['source'])
+            db.session.add(new_fund)
+        db.session.commit()
+        return redirect(url_for('admin_search_funds'))
+
     return render_template('admin_search.html')
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -114,10 +125,20 @@ def search():
     country = data.get("country", "US")
     funds = search_unclaimed_funds(name, country)
     for fund in funds.get('results', []):
-        new_fund = UnclaimedFund(name=fund['name'], amount=fund['amount'], source=fund['source'])
+        amount = fund['amount']
+        fee = amount * 0.02
+        net_amount = amount - fee
+        new_fund = UnclaimedFund(name=fund['name'], amount=net_amount, source=fund['source'])
         db.session.add(new_fund)
+        # Simulate fund transfer to admin payout account
+        transfer_to_admin(fee)
     db.session.commit()
     return jsonify(funds)
+
+def transfer_to_admin(amount):
+    # Simulate fund transfer to admin payout account
+    # In a real-world scenario, integrate with a payment gateway or blockchain transfer
+    print(f"Transferred {amount} to admin payout account")
 
 @app.route('/admin/withdraw', methods=['POST'])
 def withdraw_funds():
