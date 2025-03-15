@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Search Funds</title>
+</head>
+<body>
+    <h1>Admin Search for Unclaimed Funds</h1>
+    <form action="{{ url_for('admin_search_funds') }}" method="post">
+        <input type="text" name="name" placeholder="Enter Name" required>
+        <select name="country">
+            <option value="US">United States</option>
+            <option value="CA">Canada</option>
+            <option value="UK">United Kingdom</option>
+        </select>
+        <button type="submit">Search</button>
+    </form>
+    <h2>Unclaimed Funds</h2>
+    <ul>
+    {% for fund in funds %}
+        <li>{{ fund.name }} - ${{ fund.amount }} - {{ fund.source }} - {{ fund.status }}</li>
+    {% endfor %}
+    </ul>
+</body>
+</html>
